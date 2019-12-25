@@ -13,46 +13,58 @@ sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 genres = 'blues classical country disco hiphop jazz metal pop reggae rock electronic'.split()
 
-playlists = '''7qACZGMjyo64TdUdKAegjp 3HYK6ri0GkvRcM6GkKh0hJ 
-            4mijVkpSXJziPiOrK7YX4M 0ZVSWcJIf7cvycEn9HUvps 6MXkE0uYF4XwU4VTtyrpfP 
-            5EyFMotmvSfDAZ4hSdKrbx 3pBfUFu8MkyiCYyZe849Ks 6gS3HhOiI17QNojjPuPzqc 
-            0TcXdt4sbITbwCwwFbKYyd 7dowgSWOmvdpwNkGFMUs6e 6I0NsYzfoj7yHXyvkZYoRx'''.split()
+playlists = '''5TkTomPbQuSNDxdlWg2fCx 37i9dQZF1DWWEJlAGA9gs0
+            37i9dQZF1DXdfhOsjRMISB 3GqU5Q6CPUM7hM9ejxJC3z 33I6RpefRQcRh69xEczaKT 
+            37i9dQZF1DX0SM0LYsmbMT 37i9dQZF1DXbl9rMxGEmRC 37i9dQZF1DWXti3N4Wp5xy
+            37i9dQZF1DX8SfyqmSFDwe 37i9dQZF1DWXRqgorJj26U 15rhpIGkiReFt60lrCdzGI'''.split()
 
-columns = ['id','danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness', 
+users = ['Filtr Legacy Sweden', 'Spotify', 'Spotify', 'Maarten de Lange', 'Leon Bouw', 'Spotify', 'Spotify', 'Spotify', 'Spotify', 
+		'Spotify', 'kernkraftrecords']
+
+columns = ['danceability', 'energy', 'key', 'loudness', 'mode', 'speechiness', 
            'acousticness', 'instrumentalness','liveness', 'valence', 'tempo', 'genre']
 
 to_append = []
-
-for g in zip(genres, playlists):
+ids_lst = []
+tracks_preview_lst = []
+for g in zip(genres, users, playlists):
     
     # get playlist for given genre (default limit is 100)
-    track_ids = sp.user_playlist_tracks('thesoundsofspotify', playlist_id=g[1], 
-                                        fields='items(track(id))')
+    print('now the genre is ', g[0])
+    track_ids = sp.user_playlist_tracks(g[1], playlist_id=g[2])
     # some lists for gathering data 
-    tracks_list = []
-    
+    tracks_id_lst = []
     for track in track_ids['items']:
-        tracks_list.append(track['track']['id'])
+        tracks_id_lst.append(track['track']['id'])
+        ids_lst.append(track['track']['id'])
+        tracks_preview_lst.append(track['track']['preview_url'])
     
     # get audio features for 50 tracks at a time (spotipy only allows 50 at once)
-    # code below can be looped if more tracks need to be analyzed
-    tracks_af = sp.audio_features(tracks_list[:50])
-    for track_num in range(0, 50):
-        track_data = []
-        track_data.append(tracks_af[track_num]['id'])
-        track_data.append(tracks_af[track_num]['danceability'])
-        track_data.append(tracks_af[track_num]['energy'])
-        track_data.append(tracks_af[track_num]['key'])
-        track_data.append(tracks_af[track_num]['loudness'])
-        track_data.append(tracks_af[track_num]['mode'])
-        track_data.append(tracks_af[track_num]['speechiness'])
-        track_data.append(tracks_af[track_num]['acousticness'])
-        track_data.append(tracks_af[track_num]['instrumentalness'])
-        track_data.append(tracks_af[track_num]['liveness'])
-        track_data.append(tracks_af[track_num]['valence'])
-        track_data.append(tracks_af[track_num]['tempo'])
-        track_data.append(g[0])
-        to_append.append(track_data)
+    # loop so all 100 tracks is included in the data
+    for i in range(0,100, 50):
+	    tracks_af = sp.audio_features(tracks_id_lst[i:i+50])
+	    # print(len(tracks_af))
+	    for track_num in range(0, 50):
+	        track_data = []
+	        print(track_num)
+	        if tracks_af[track_num] == None:
+	        	continue 
+	        track_data.append(tracks_af[track_num]['danceability'])
+	        track_data.append(tracks_af[track_num]['energy'])
+	        track_data.append(tracks_af[track_num]['key'])
+	        track_data.append(tracks_af[track_num]['loudness'])
+	        track_data.append(tracks_af[track_num]['mode'])
+	        track_data.append(tracks_af[track_num]['speechiness'])
+	        track_data.append(tracks_af[track_num]['acousticness'])
+	        track_data.append(tracks_af[track_num]['instrumentalness'])
+	        track_data.append(tracks_af[track_num]['liveness'])
+	        track_data.append(tracks_af[track_num]['valence'])
+	        track_data.append(tracks_af[track_num]['tempo'])
+	        track_data.append(g[0])
+	        to_append.append(track_data)
 audio_data = pd.DataFrame(to_append, columns=columns)
-print(tracks_af[0])
-# print(len(tracks_list))
+info = pd.DataFrame({'id':ids_lst, 'preview_url': tracks_preview_lst})
+#concat id, preview_url information for each track
+audio_data = pd.concat([info, audio_data], axis=1)
+audio_data.to_csv('audio_data_new.csv')
+
